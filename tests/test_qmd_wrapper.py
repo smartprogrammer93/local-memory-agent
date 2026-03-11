@@ -206,10 +206,10 @@ class TestVsearchSameAsSearch:
 
         _run_cli(["vsearch", "test"])
 
-        # Verify it called the fast /search endpoint
+        # vsearch uses the semantic /query endpoint
         mock_get.assert_called_once()
         call_url = mock_get.call_args[0][0]
-        assert "/search" in call_url
+        assert "/query" in call_url
 
         out = capsys.readouterr().out
         assert "Title: Result 0" in out
@@ -240,6 +240,31 @@ class TestMinScoreFilter:
 
 
 # ─── New tests for --json / -c / _get_qmd_anchor_docid ────────
+
+
+class TestSearchUsesKeywordEndpoint:
+    """search and query subcommands use fast /search; vsearch uses LLM /query."""
+
+    @patch("qmd_wrapper.requests.get")
+    def test_search_uses_search_endpoint(self, mock_get, capsys):
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"results": []})
+        mock_get.return_value.raise_for_status = MagicMock()
+        _run_cli(["search", "test"])
+        assert "/search" in mock_get.call_args[0][0]
+
+    @patch("qmd_wrapper.requests.get")
+    def test_query_uses_search_endpoint(self, mock_get, capsys):
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"results": []})
+        mock_get.return_value.raise_for_status = MagicMock()
+        _run_cli(["query", "test"])
+        assert "/search" in mock_get.call_args[0][0]
+
+    @patch("qmd_wrapper.requests.get")
+    def test_vsearch_uses_query_endpoint(self, mock_get, capsys):
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"answer": "result"})
+        mock_get.return_value.raise_for_status = MagicMock()
+        _run_cli(["vsearch", "test"])
+        assert "/query" in mock_get.call_args[0][0]
 
 
 class TestSearchJsonFlag:

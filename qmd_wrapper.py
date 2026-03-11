@@ -59,15 +59,15 @@ def _get_qmd_anchor_docid(filename: str = "") -> str:
 # ─── Helpers ───────────────────────────────────────────────────
 
 
-def _query_agent(query_text, n=None, files_mode=False, min_score=None, json_output=False):
-    """Search memories — uses fast /search endpoint (no LLM) for low-latency results.
+def _query_agent(query_text, n=None, files_mode=False, min_score=None, json_output=False, semantic=False):
+    """Search memories.
 
-    The full LLM-synthesis /query endpoint is available via the HTTP API directly
-    when rich synthesized answers are needed, but is too slow for tool integration.
+    semantic=False → fast SQLite keyword search via /search (~16ms, used by `search` and `query`)
+    semantic=True  → full LLM-synthesis via /query (~30-90s, used by `vsearch`)
     """
     import json as _json
     n = n or DEFAULT_RESULTS
-    url = f"{MEMORY_AGENT_URL}/search"
+    url = f"{MEMORY_AGENT_URL}/{'query' if semantic else 'search'}"
 
     try:
         resp = requests.get(url, params={"q": query_text}, timeout=120)
@@ -192,6 +192,7 @@ def cmd_search(args):
         files_mode=args.files,
         min_score=args.min_score,
         json_output=getattr(args, "json", False),
+        semantic=getattr(args, "_semantic", False),
     )
 
 
@@ -244,7 +245,8 @@ def build_parser():
     )
     sub = parser.add_subparsers(dest="command")
 
-    # search / query / vsearch — all do the same thing
+    # search / query → fast SQLite keyword search
+    # vsearch → full LLM-synthesis (semantic, slower)
     for name in ("search", "query", "vsearch"):
         p = sub.add_parser(name, help=f"Search memories ({name})")
         p.add_argument("query", nargs="+", help="Search query")
@@ -253,7 +255,7 @@ def build_parser():
         p.add_argument("--min-score", type=int, default=None, help="Min confidence %%")
         p.add_argument("--json", action="store_true", help="JSON output (ignored, always plain text)")
         p.add_argument("-c", "--collection", default=None, help="Collection name (ignored, searches all)")
-        p.set_defaults(func=cmd_search)
+        p.set_defaults(func=cmd_search, _semantic=(name == "vsearch"))
 
     # get
     p = sub.add_parser("get", help="Read a file from disk")
