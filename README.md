@@ -2,7 +2,7 @@
 
 **An always-on AI memory agent that runs 24/7 on any local OpenAI-compatible LLM — no cloud APIs required.**
 
-> Forked from [Shubhamsaboo/always-on-memory-agent](https://github.com/Shubhamsaboo/always-on-memory-agent), replacing Google ADK + Gemini with a local LLM over any OpenAI-compatible API (llama.cpp, Ollama, LM Studio, vLLM, etc.)
+> Forked from [GoogleCloudPlatform/generative-ai](https://github.com/GoogleCloudPlatform/generative-ai/tree/main/gemini/agents/always-on-memory-agent), replacing Google ADK + Gemini with a local LLM over any OpenAI-compatible API (llama.cpp, Ollama, LM Studio, vLLM, etc.)
 
 Most AI agents have amnesia. They process information when asked, then forget everything. This project gives agents a persistent, evolving memory that runs 24/7 as a lightweight background process — continuously processing, consolidating, and connecting information.
 
@@ -361,7 +361,7 @@ systemctl status local-memory-agent
 
 ## Credits
 
-Based on [Shubhamsaboo/always-on-memory-agent](https://github.com/Shubhamsaboo/always-on-memory-agent). Architecture ported from Google ADK + Gemini to a model-agnostic OpenAI-compatible implementation.
+Based on [GoogleCloudPlatform/generative-ai — always-on-memory-agent](https://github.com/GoogleCloudPlatform/generative-ai/tree/main/gemini/agents/always-on-memory-agent). Architecture ported from Google ADK + Gemini to a model-agnostic OpenAI-compatible implementation.
 
 ## License
 
