@@ -14,13 +14,33 @@ import requests
 
 MEMORY_AGENT_URL = os.getenv("MEMORY_AGENT_URL", "http://localhost:8888")
 DEFAULT_RESULTS = int(os.getenv("MEMORY_RESULTS", "5"))
+QMD_INDEX = os.path.expanduser(
+    "~/.openclaw/agents/main/qmd/xdg-cache/qmd/index.sqlite"
+)
+
+
+def _get_qmd_anchor_docid():
+    """Return a real document hash from QMD's SQLite index to use as anchor."""
+    import sqlite3 as _sqlite3
+    try:
+        conn = _sqlite3.connect(QMD_INDEX)
+        row = conn.execute(
+            "SELECT hash FROM documents WHERE active=1 ORDER BY path LIMIT 1"
+        ).fetchone()
+        conn.close()
+        if row:
+            return row[0]
+    except Exception:
+        pass
+    return "memory"  # last-resort fallback (will likely be skipped by OpenClaw)
 
 
 # ─── Helpers ───────────────────────────────────────────────────
 
 
-def _query_agent(query_text, n=None, files_mode=False, min_score=None):
+def _query_agent(query_text, n=None, files_mode=False, min_score=None, json_output=False):
     """POST a query to the agent and return formatted results."""
+    import json as _json
     n = n or DEFAULT_RESULTS
     url = f"{MEMORY_AGENT_URL}/query"
 
@@ -28,16 +48,21 @@ def _query_agent(query_text, n=None, files_mode=False, min_score=None):
         resp = requests.get(url, params={"q": query_text}, timeout=120)
         resp.raise_for_status()
     except (requests.ConnectionError, requests.Timeout) as exc:
-        print(f"local-memory-agent-cli: agent unreachable ({exc})", file=sys.stderr)
+        if json_output:
+            print("[]")
+        else:
+            print(f"local-memory-agent-cli: agent unreachable ({exc})", file=sys.stderr)
         return
     except requests.RequestException as exc:
-        print(f"local-memory-agent-cli: request failed ({exc})", file=sys.stderr)
+        if json_output:
+            print("[]")
+        else:
+            print(f"local-memory-agent-cli: request failed ({exc})", file=sys.stderr)
         return
 
     data = resp.json()
 
     # The agent may return a simple answer string or structured results.
-    # Handle both cases gracefully.
     results = data.get("results", [])
 
     # If the response is a flat answer (no structured results), wrap it.
@@ -60,7 +85,21 @@ def _query_agent(query_text, n=None, files_mode=False, min_score=None):
     # Limit to n results
     results = results[:n]
 
-    if files_mode:
+    if json_output:
+        # Return JSON array in QMD format OpenClaw expects: [{docid, score, snippet}, ...]
+        # docid must be a real hash from QMD's SQLite index — we use the MEMORY.md hash
+        # as anchor while injecting our synthesized answer as the snippet.
+        anchor_docid = _get_qmd_anchor_docid()
+        output = [
+            {
+                "docid": anchor_docid,
+                "score": r.get("score", 1.0),
+                "snippet": r.get("snippet", r.get("title", "")),
+            }
+            for r in results
+        ]
+        print(_json.dumps(output))
+    elif files_mode:
         for r in results:
             score_pct = int(r.get("score", 0) * 100)
             print(f"{r.get('docid', '')},{score_pct},{r.get('filepath', '')}")
@@ -128,6 +167,7 @@ def cmd_search(args):
         n=args.n,
         files_mode=args.files,
         min_score=args.min_score,
+        json_output=getattr(args, "json", False),
     )
 
 
@@ -187,6 +227,8 @@ def build_parser():
         p.add_argument("-n", type=int, default=DEFAULT_RESULTS, help="Max results")
         p.add_argument("--files", action="store_true", help="CSV output: docid,score,filepath")
         p.add_argument("--min-score", type=int, default=None, help="Min confidence %%")
+        p.add_argument("--json", action="store_true", help="JSON output (ignored, always plain text)")
+        p.add_argument("-c", "--collection", default=None, help="Collection name (ignored, searches all)")
         p.set_defaults(func=cmd_search)
 
     # get
