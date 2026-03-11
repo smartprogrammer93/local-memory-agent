@@ -152,22 +152,28 @@ The agent watches for new or modified `.md` files and re-ingests them automatica
 
 Allows [OpenClaw](https://github.com/openclaw/openclaw) users to swap QMD's vector-embedding retrieval for this agent's semantic memory. You get richer, context-aware results powered by a local LLM without changing any OpenClaw configuration beyond the memory command.
 
-### Search mode comparison
+### Full mode comparison: Real QMD vs local-memory-agent-cli
 
-OpenClaw supports three `searchMode` values. Here's how each behaves with real QMD vs. this agent:
+OpenClaw supports three `searchMode` values. Here's a detailed comparison of how each behaves with real QMD vs. this agent:
 
-| Mode | Real QMD | local-memory-agent-cli | Latency |
+| | `search` | `vsearch` | `query` |
 |---|---|---|---|
-| `search` | BM25 keyword matching (fast, exact terms) | SQLite `LIKE` keyword search over memory summaries | ~20ms ⚡ |
-| `vsearch` | Vector/semantic search — requires local embedding model (~8.5GB RAM) | Full LLM synthesis via `/query` — understands meaning, synonyms, context | 20–90s 🧠 |
-| `query` | QMD structured query language | LLM query expansion + SQLite keyword search | ~3-5s 🔍 |
+| **Real QMD mechanism** | BM25 keyword matching — inverted index over tokenized documents | Vector/semantic search — cosine similarity over dense embeddings | Structured query language with query expansion + reranking |
+| **Our mechanism** | SQLite `LIKE` keyword search over memory summaries | Full LLM synthesis via `/query` — reads all memories and generates an answer | LLM query expansion (synonyms, related terms) then SQLite keyword search |
+| **QMD RAM requirement** | ~50–200 MB (inverted index) | ~8.5 GB (local GGUF embedding model loaded in memory) | ~50–200 MB (index) + reranking model if enabled |
+| **Our RAM requirement** | Negligible (SQLite only) | Uses already-running LLM (no extra model) | Uses already-running LLM for expansion, then SQLite |
+| **QMD model dependency** | None (pure algorithmic) | Requires downloading a GGUF embedding model | Optional reranking model |
+| **Our model dependency** | None (pure SQLite) | Requires running local LLM | Requires running local LLM |
+| **QMD latency** | ~1–5 ms | ~50–200 ms | ~10–50 ms |
+| **Our latency** | ~20 ms | 20–90 s | ~3–5 s |
+| **Result quality** | High for exact keyword matches; misses synonyms and related concepts | High — finds semantically similar content regardless of wording | Good — expands queries but limited by embedding model quality |
+| **Our result quality** | Moderate — simple substring matching, no stemming or tokenization | Very high — LLM understands context, synonyms, and nuance across all memories | Good — LLM-expanded keywords improve recall over plain `search` |
+| **Best for (QMD)** | Real-time tool calls, exact lookups, high-throughput scenarios | Research, finding conceptually related content, "find anything about X" | Structured queries, filtered searches, moderate recall improvement |
+| **Best for (ours)** | Real-time `memory_search` tool calls where speed matters | Background research, deep queries where quality > speed | Balanced use — better recall than `search`, much faster than `vsearch` |
+| **When to prefer QMD** | You need sub-5ms latency at scale; you have many thousands of documents | You have the RAM for the embedding model and need fast semantic search | You want structured filtering and fast reranked results |
+| **When to prefer ours** | You want zero extra dependencies beyond SQLite | You already run a local LLM and don't want a separate 8.5 GB embedding model | You want semantic enrichment without the full `vsearch` latency cost |
 
-**When to use each:**
-- **`search`** (default) — fast lookups, exact term matching, best for real-time `memory_search` tool calls
-- **`vsearch`** — semantic understanding, finds conceptually related memories even without exact keywords; use when query quality matters more than speed (e.g. background research)
-- **`query`** — LLM-expanded keyword search; enriches your query with synonyms and related terms before searching, better recall than plain `search` with moderate latency (~3-5s)
-
-**Key advantage over real QMD `vsearch`:** real QMD's vector search requires downloading and running a local GGUF embedding model (~8.5GB RAM). Our `vsearch` uses the already-running LLM agent instead — no extra model required.
+**Summary of tradeoffs:** Real QMD excels at raw speed — BM25 search and vector lookup are both sub-second operations optimized for high-throughput retrieval. If you have thousands of documents and need instant results, QMD is the better choice, especially for `search` and `vsearch` where the latency difference is 100–1000x. However, QMD's `vsearch` requires downloading and loading a separate ~8.5 GB embedding model into RAM, which is a significant resource commitment. local-memory-agent-cli trades speed for simplicity and deeper understanding: it requires no extra models beyond your already-running LLM, and its `vsearch` mode produces richer, more contextual answers by having the LLM reason across all stored memories rather than just returning vector-similar chunks. For small-to-medium memory stores (hundreds to low thousands of entries) where sub-second latency isn't critical, the local-memory-agent approach gives better answer quality with a simpler setup. The `query` mode offers a practical middle ground — LLM-expanded keyword search that's much faster than full synthesis while still capturing synonyms and related concepts that plain keyword search would miss.
 
 Set the mode in `~/.openclaw/openclaw.json`:
 
