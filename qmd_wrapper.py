@@ -28,10 +28,10 @@ def _query_agent(query_text, n=None, files_mode=False, min_score=None):
         resp = requests.get(url, params={"q": query_text}, timeout=120)
         resp.raise_for_status()
     except (requests.ConnectionError, requests.Timeout) as exc:
-        print(f"qmd-qwen: agent unreachable ({exc})", file=sys.stderr)
+        print(f"local-memory-agent-cli: agent unreachable ({exc})", file=sys.stderr)
         return
     except requests.RequestException as exc:
-        print(f"qmd-qwen: request failed ({exc})", file=sys.stderr)
+        print(f"local-memory-agent-cli: request failed ({exc})", file=sys.stderr)
         return
 
     data = resp.json()
@@ -102,10 +102,10 @@ def _read_file(filespec, lines=None, from_line=None):
         with open(filepath, "r") as f:
             all_lines = f.readlines()
     except FileNotFoundError:
-        print(f"qmd-qwen: file not found: {filepath}", file=sys.stderr)
+        print(f"local-memory-agent-cli: file not found: {filepath}", file=sys.stderr)
         sys.exit(1)
     except PermissionError:
-        print(f"qmd-qwen: permission denied: {filepath}", file=sys.stderr)
+        print(f"local-memory-agent-cli: permission denied: {filepath}", file=sys.stderr)
         sys.exit(1)
 
     # Convert to 0-based index
@@ -146,10 +146,10 @@ def cmd_status(args):
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
     except (requests.ConnectionError, requests.Timeout) as exc:
-        print(f"qmd-qwen: agent unreachable ({exc})", file=sys.stderr)
+        print(f"local-memory-agent-cli: agent unreachable ({exc})", file=sys.stderr)
         return
     except requests.RequestException as exc:
-        print(f"qmd-qwen: request failed ({exc})", file=sys.stderr)
+        print(f"local-memory-agent-cli: request failed ({exc})", file=sys.stderr)
         return
 
     data = resp.json()
@@ -162,11 +162,11 @@ def cmd_status(args):
 
 
 def cmd_noop(args):
-    print(f"qmd-qwen: {args._subcmd} is a no-op (handled by local memory agent)")
+    print(f"local-memory-agent-cli: {args._subcmd} is a no-op (handled by local memory agent)")
 
 
 def cmd_mcp(args):
-    print("qmd-qwen: mcp subcommand is not supported")
+    print("local-memory-agent-cli: mcp subcommand is not supported")
     sys.exit(1)
 
 

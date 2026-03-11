@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# install_qmd_wrapper.sh — Install qmd-qwen CLI wrapper for OpenClaw memory backend.
+# install_qmd_wrapper.sh — Install local-memory-agent-cli CLI wrapper for OpenClaw memory backend.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_FILE="$SCRIPT_DIR/qmd_wrapper.py"
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             echo "Usage: $0 [--apply | --restore] [--prefix DIR]"
             echo ""
-            echo "  (default)   Install qmd-qwen to ~/.local/bin and print config instructions"
+            echo "  (default)   Install local-memory-agent-cli to ~/.local/bin and print config instructions"
             echo "  --apply     Also patch ~/.openclaw/openclaw.json (backs up to .bak)"
             echo "  --restore   Restore openclaw.json from .bak, or remove memory.qmd.command"
             echo "  --prefix    Install directory (default: ~/.local/bin)"
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-DEST="$PREFIX/qmd-qwen"
+DEST="$PREFIX/local-memory-agent-cli"
 
 # ── Helpers ──────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ check_prerequisites() {
 
     # Validate python3
     if ! command -v python3 &>/dev/null; then
-        echo "WARNING: python3 not found in PATH. qmd-qwen requires python3." >&2
+        echo "WARNING: python3 not found in PATH. local-memory-agent-cli requires python3." >&2
     else
         # Validate requests module
         if ! python3 -c "import requests" 2>/dev/null; then
@@ -71,7 +71,7 @@ do_install() {
 
     chmod +x "$DEST"
 
-    echo "Installed qmd-qwen to $DEST"
+    echo "Installed local-memory-agent-cli to $DEST"
     echo ""
     echo "To configure OpenClaw, add to $OPENCLAW_CONFIG:"
     echo ""

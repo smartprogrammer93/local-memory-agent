@@ -146,7 +146,7 @@ The agent watches for new or modified `.md` files and re-ingests them automatica
 
 ### What it is
 
-`qmd-qwen` is a CLI wrapper that mimics the [QMD](https://github.com/openclaw/openclaw) interface but routes queries through the Qwen memory agent. Instead of QMD's vector store, search results come from this agent's LLM-synthesized memory — formatted to match QMD's output exactly, so OpenClaw sees no difference.
+`local-memory-agent-cli` is a CLI wrapper that mimics the [QMD](https://github.com/openclaw/openclaw) interface but routes queries through the Qwen memory agent. Instead of QMD's vector store, search results come from this agent's LLM-synthesized memory — formatted to match QMD's output exactly, so OpenClaw sees no difference.
 
 ### Why
 
@@ -154,7 +154,7 @@ Allows [OpenClaw](https://github.com/openclaw/openclaw) users to swap QMD's vect
 
 ### Prerequisites
 
-The Qwen memory agent must be running on port 8888 before using `qmd-qwen`:
+The Qwen memory agent must be running on port 8888 before using `local-memory-agent-cli`:
 
 ```bash
 # Option A: run directly
@@ -170,7 +170,7 @@ sudo systemctl start local-memory-agent
 bash install_qmd_wrapper.sh --apply
 ```
 
-This copies `qmd-qwen` to `~/.local/bin/`, makes it executable, and patches `~/.openclaw/openclaw.json` to use it as the memory backend (a `.bak` backup is created automatically).
+This copies `local-memory-agent-cli` to `~/.local/bin/`, makes it executable, and patches `~/.openclaw/openclaw.json` to use it as the memory backend (a `.bak` backup is created automatically).
 
 To install without patching the config (manual setup):
 
@@ -182,10 +182,10 @@ bash install_qmd_wrapper.sh
 
 ```bash
 # Check agent connectivity and memory stats
-qmd-qwen status
+local-memory-agent-cli status
 
 # Run a test search
-qmd-qwen search "test query"
+local-memory-agent-cli search "test query"
 ```
 
 ### Restoring original QMD
