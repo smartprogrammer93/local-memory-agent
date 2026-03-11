@@ -203,6 +203,35 @@ This restores `openclaw.json` from the `.bak` backup, or removes the `memory.qmd
 | `MEMORY_AGENT_URL` | `http://localhost:8888` | Base URL of the running local memory agent |
 | `MEMORY_RESULTS` | `5` | Maximum number of results returned per query |
 
+### OpenClaw timeout configuration
+
+By default OpenClaw allows only 4 seconds for a `memory_search` call. The `local-memory-agent-cli` uses a fast SQLite keyword search (`/search` endpoint, ~20ms) so this is fine for the default integration.
+
+If you switch to the full LLM-synthesis endpoint (`/query`) manually or extend the wrapper, you will need to increase the timeout in `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "memory": {
+    "backend": "qmd",
+    "qmd": {
+      "command": "/path/to/local-memory-agent-cli",
+      "limits": {
+        "timeoutMs": 60000
+      }
+    }
+  }
+}
+```
+
+Then restart the OpenClaw gateway:
+
+```bash
+# Restart without killing your current session (gateway runs in-process)
+tmux new-session -d -s gw-restart 'sleep 2 && openclaw gateway restart'
+```
+
+> **Note:** The `limits.timeoutMs` field controls the maximum time OpenClaw waits for a QMD search response. Default is `4000` (4 seconds). The LLM-synthesis `/query` endpoint typically takes 30–90 seconds depending on query complexity and hardware.
+
 ### Limitations
 
 - **No vector embeddings management** — all retrieval is LLM-synthesized, not embedding-based
@@ -220,7 +249,8 @@ This restores `openclaw.json` from the `.bak` backup, or removes the `memory.qmd
 | `/status` | GET | Memory statistics |
 | `/memories` | GET | List all stored memories |
 | `/ingest` | POST | Ingest text `{"text": "...", "source": "..."}` |
-| `/query?q=...` | GET | Query memory with natural language |
+| `/search?q=...&n=5` | GET | Fast keyword search (SQLite, no LLM, ~20ms) |
+| `/query?q=...` | GET | Full LLM-synthesis query (rich answers, 30–90s) |
 | `/consolidate` | POST | Trigger consolidation manually |
 | `/delete` | POST | Delete a memory `{"memory_id": 1}` |
 | `/clear` | POST | Reset all memories |

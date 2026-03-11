@@ -1,8 +1,15 @@
 """Tests for agents.py — build_agents and MemoryOrchestrator routing."""
 
+import os
+import tempfile
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+# Redirect DB to a temp file before any tools import touches the real DB
+_tmp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+_tmp_db.close()
+os.environ.setdefault("MEMORY_DB", _tmp_db.name)
 
 from agents import (
     CONSOLIDATE_PROMPT,
