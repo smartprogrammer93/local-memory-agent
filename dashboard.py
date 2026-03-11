@@ -13,13 +13,16 @@ Usage:
 """
 
 import json
+import os
 import time
 from pathlib import Path
 
 import requests
 import streamlit as st
 
-AGENT_URL = "http://localhost:8888"
+API_PORT = os.environ.get("API_PORT", "8888")
+AGENT_URL = f"http://localhost:{API_PORT}"
+QWEN_BASE_URL = os.environ.get("QWEN_BASE_URL", "http://192.168.8.188:8080")
 INBOX_DIR = Path("./inbox")
 
 UPLOAD_EXTENSIONS = [
@@ -153,13 +156,35 @@ def main():
             st.info("Start the agent:\n```\npython agent.py\n```")
 
         st.markdown("---")
-        st.markdown("<p style='text-align: center; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px;'>Powered by</p>", unsafe_allow_html=True)
-        logo_col1, logo_col2 = st.columns(2)
-        with logo_col1:
-            st.image("docs/Gemini_logo.png", use_container_width=True)
-        with logo_col2:
-            st.image("docs/adk_logo.png", width=90)
-        st.caption(f"Endpoint: `{AGENT_URL}`")
+        st.markdown("### 🤖 Qwen Server Status")
+        try:
+            qwen_resp = requests.get(f"{QWEN_BASE_URL}/v1/models", timeout=5)
+            if qwen_resp.status_code == 200:
+                st.markdown(
+                    '<div class="stat-card" style="margin-bottom:8px;">'
+                    '<div class="stat-number" style="color:#4ade80;">●</div>'
+                    '<div class="stat-label">Qwen3.5-9B Online</div></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<div class="stat-card" style="margin-bottom:8px;">'
+                    '<div class="stat-number" style="color:#ef4444;">●</div>'
+                    f'<div class="stat-label">Qwen3.5-9B Error ({qwen_resp.status_code})</div></div>',
+                    unsafe_allow_html=True,
+                )
+        except Exception:
+            st.markdown(
+                '<div class="stat-card" style="margin-bottom:8px;">'
+                '<div class="stat-number" style="color:#ef4444;">●</div>'
+                '<div class="stat-label">Qwen3.5-9B Unreachable</div></div>',
+                unsafe_allow_html=True,
+            )
+        st.caption(f"Server: `{QWEN_BASE_URL}`")
+
+        st.markdown("---")
+        st.markdown("<p style='text-align: center; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px;'>Powered by Qwen3.5-9B</p>", unsafe_allow_html=True)
+        st.caption(f"Agent: `{AGENT_URL}`")
 
     # Main
     st.markdown(
@@ -170,7 +195,7 @@ def main():
             font-size: 36px; margin: 8px 0 4px;">Always On Agent Memory Layer</h1>
         <p style="color: #666; font-size: 14px; max-width: 600px; margin: 0 auto;">
             Always-on memory agent that processes, consolidates, and connects information.<br>
-            Built with <strong style="color: #93c5fd;">Google ADK</strong> + <strong style="color: #c4b5fd;">Gemini 3.1 Flash-Lite</strong>.
+            Built with <strong style="color: #93c5fd;">Qwen3.5-9B</strong> + <strong style="color: #c4b5fd;">OpenAI-compatible API</strong>.
             Runs 24/7 as a background process.
         </p>
         </div>""",

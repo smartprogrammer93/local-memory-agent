@@ -1,0 +1,17 @@
+[Unit]
+Description=Qwen Memory Agent
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/projects/qwen-memory-agent
+EnvironmentFile=/root/projects/qwen-memory-agent/.env
+ExecStart=/usr/bin/python3 agent.py --watch ./inbox --watch-memory /root/.openclaw/workspace/memory --port 8888 --consolidate-every 30
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=qwen-memory-agent
+
+[Install]
+WantedBy=multi-user.target

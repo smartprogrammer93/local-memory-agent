@@ -1,1 +1,8 @@
 .env
+memory.db
+inbox/*
+!inbox/.gitkeep
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
