@@ -98,6 +98,7 @@ Three specialized agents collaborate around a shared SQLite memory store:
 ```bash
 git clone https://github.com/smartprogrammer93/local-memory-agent.git
 cd local-memory-agent
+
 pip install -r requirements.txt
 ```
 
