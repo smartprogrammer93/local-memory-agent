@@ -206,10 +206,10 @@ class TestVsearchSameAsSearch:
 
         _run_cli(["vsearch", "test"])
 
-        # Verify it called the same /query endpoint
+        # Verify it called the fast /search endpoint
         mock_get.assert_called_once()
         call_url = mock_get.call_args[0][0]
-        assert "/query" in call_url
+        assert "/search" in call_url
 
         out = capsys.readouterr().out
         assert "Title: Result 0" in out

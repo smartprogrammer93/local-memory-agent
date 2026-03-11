@@ -36,6 +36,7 @@ from tools import (
     get_memory_stats,
     delete_memory,
     clear_all_memories,
+    search_memories_fast,
 )
 
 load_dotenv()
@@ -284,6 +285,16 @@ def build_http(agent: MemoryAgent, watch_path: str = "./inbox"):
     async def handle_health(request: web.Request):
         return web.json_response({"status": "ok"})
 
+    async def handle_search(request: web.Request):
+        """Fast keyword/FTS search over stored memories — no LLM, returns instantly."""
+        q = request.rel_url.query.get("q", "").strip()
+        n = int(request.rel_url.query.get("n", "5"))
+        if not q:
+            return web.json_response({"results": []})
+        results = search_memories_fast(q, n)
+        return web.json_response({"results": results})
+
+    app.router.add_get("/search", handle_search)
     app.router.add_get("/query", handle_query)
     app.router.add_post("/ingest", handle_ingest)
     app.router.add_post("/ingest-file", handle_ingest_file)

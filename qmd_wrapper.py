@@ -39,10 +39,14 @@ def _get_qmd_anchor_docid():
 
 
 def _query_agent(query_text, n=None, files_mode=False, min_score=None, json_output=False):
-    """POST a query to the agent and return formatted results."""
+    """Search memories — uses fast /search endpoint (no LLM) for low-latency results.
+
+    The full LLM-synthesis /query endpoint is available via the HTTP API directly
+    when rich synthesized answers are needed, but is too slow for tool integration.
+    """
     import json as _json
     n = n or DEFAULT_RESULTS
-    url = f"{MEMORY_AGENT_URL}/query"
+    url = f"{MEMORY_AGENT_URL}/search"
 
     try:
         resp = requests.get(url, params={"q": query_text}, timeout=120)

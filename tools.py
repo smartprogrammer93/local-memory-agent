@@ -279,3 +279,52 @@ def clear_all_memories(inbox_path: str | None = None) -> dict:
 
     log.info(f"Cleared all {mem_count} memories, deleted {files_deleted} inbox files")
     return {"status": "cleared", "memories_deleted": mem_count, "files_deleted": files_deleted}
+
+
+def search_memories_fast(query: str, n: int = 5) -> list[dict]:
+    """Fast keyword search over memories using SQLite LIKE — no LLM required.
+
+    Scores results by counting how many query terms appear in the content,
+    then ranks by match count descending. Returns at most *n* results.
+    """
+    db = init_db()
+    terms = [t.strip().lower() for t in query.split() if len(t.strip()) > 2]
+    if not terms:
+        # Fallback: return the most recent N memories
+        rows = db.execute(
+            "SELECT id, summary FROM memories ORDER BY id DESC LIMIT ?", (n,)
+        ).fetchall()
+        return [
+            {
+                "docid": f"memory-{r['id']}",
+                "score": 0.5,
+                "snippet": r["summary"],
+                "title": f"Memory #{r['id']}",
+                "filepath": "",
+            }
+            for r in rows
+        ]
+
+    # Fetch all memories and score by term frequency across summary + raw_text
+    rows = db.execute("SELECT id, summary, raw_text FROM memories").fetchall()
+    scored = []
+    for row in rows:
+        text = (row["summary"] + " " + row["raw_text"]).lower()
+        hits = sum(1 for t in terms if t in text)
+        if hits > 0:
+            scored.append((hits, row["id"], row["summary"]))
+
+    # Sort by hits desc, then id desc (most recent first for ties)
+    scored.sort(key=lambda x: (-x[0], -x[1]))
+    top = scored[:n]
+
+    return [
+        {
+            "docid": f"memory-{item[1]}",
+            "score": round(item[0] / len(terms), 2),
+            "snippet": item[2],
+            "title": f"Memory #{item[1]}",
+            "filepath": "",
+        }
+        for item in top
+    ]
