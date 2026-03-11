@@ -286,13 +286,14 @@ def search_memories_fast(query: str, n: int = 5) -> list[dict]:
 
     Scores results by counting how many query terms appear in the content,
     then ranks by match count descending. Returns at most *n* results.
+    Each result includes the source filename so the wrapper can look up the
+    correct QMD document hash for accurate citations.
     """
     db = init_db()
     terms = [t.strip().lower() for t in query.split() if len(t.strip()) > 2]
     if not terms:
-        # Fallback: return the most recent N memories
         rows = db.execute(
-            "SELECT id, summary FROM memories ORDER BY id DESC LIMIT ?", (n,)
+            "SELECT id, source, summary FROM memories ORDER BY id DESC LIMIT ?", (n,)
         ).fetchall()
         return [
             {
@@ -300,21 +301,20 @@ def search_memories_fast(query: str, n: int = 5) -> list[dict]:
                 "score": 0.5,
                 "snippet": r["summary"],
                 "title": f"Memory #{r['id']}",
+                "source": r["source"],
                 "filepath": "",
             }
             for r in rows
         ]
 
-    # Fetch all memories and score by term frequency across summary + raw_text
-    rows = db.execute("SELECT id, summary, raw_text FROM memories").fetchall()
+    rows = db.execute("SELECT id, source, summary, raw_text FROM memories").fetchall()
     scored = []
     for row in rows:
         text = (row["summary"] + " " + row["raw_text"]).lower()
         hits = sum(1 for t in terms if t in text)
         if hits > 0:
-            scored.append((hits, row["id"], row["summary"]))
+            scored.append((hits, row["id"], row["summary"], row["source"]))
 
-    # Sort by hits desc, then id desc (most recent first for ties)
     scored.sort(key=lambda x: (-x[0], -x[1]))
     top = scored[:n]
 
@@ -324,6 +324,7 @@ def search_memories_fast(query: str, n: int = 5) -> list[dict]:
             "score": round(item[0] / len(terms), 2),
             "snippet": item[2],
             "title": f"Memory #{item[1]}",
+            "source": item[3],
             "filepath": "",
         }
         for item in top

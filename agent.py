@@ -166,7 +166,8 @@ async def watch_folder(agent: MemoryAgent, folder: Path, poll_interval: int = 5,
                         if isinstance(content, list):
                             await agent.ingest_file(str(f))
                         else:
-                            await agent.ingest(content, source=source_tag)
+                            # Use actual filename as source so memories are traceable
+                            await agent.ingest(content, source=f.name)
                     else:
                         await agent.ingest_file(str(f))
                 except Exception as file_err:

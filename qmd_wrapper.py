@@ -19,20 +19,41 @@ QMD_INDEX = os.path.expanduser(
 )
 
 
-def _get_qmd_anchor_docid():
-    """Return a real document hash from QMD's SQLite index to use as anchor."""
+def _get_qmd_anchor_docid(filename: str = "") -> str:
+    """Return a real document hash from QMD's SQLite index.
+
+    If *filename* is given (e.g. '2026-03-11.md'), try to find the hash for
+    that specific file so citations point to the right source file.
+    Falls back to any active document if no match is found.
+    """
     import sqlite3 as _sqlite3
     try:
         conn = _sqlite3.connect(QMD_INDEX)
-        row = conn.execute(
-            "SELECT hash FROM documents WHERE active=1 ORDER BY path LIMIT 1"
-        ).fetchone()
+        if filename:
+            # Try exact path match first
+            row = conn.execute(
+                "SELECT hash FROM documents WHERE active=1 AND path = ? LIMIT 1",
+                (filename,)
+            ).fetchone()
+            if not row:
+                # Try basename match (strip directory prefix)
+                base = filename.split("/")[-1]
+                row = conn.execute(
+                    "SELECT hash FROM documents WHERE active=1 AND path LIKE ? LIMIT 1",
+                    (f"%{base}",)
+                ).fetchone()
+        else:
+            row = None
+        if not row:
+            row = conn.execute(
+                "SELECT hash FROM documents WHERE active=1 ORDER BY path LIMIT 1"
+            ).fetchone()
         conn.close()
         if row:
             return row[0]
     except Exception:
         pass
-    return "memory"  # last-resort fallback (will likely be skipped by OpenClaw)
+    return "memory"  # last-resort fallback
 
 
 # ─── Helpers ───────────────────────────────────────────────────
@@ -91,12 +112,11 @@ def _query_agent(query_text, n=None, files_mode=False, min_score=None, json_outp
 
     if json_output:
         # Return JSON array in QMD format OpenClaw expects: [{docid, score, snippet}, ...]
-        # docid must be a real hash from QMD's SQLite index — we use the MEMORY.md hash
-        # as anchor while injecting our synthesized answer as the snippet.
-        anchor_docid = _get_qmd_anchor_docid()
+        # docid must be a real hash from QMD's SQLite index.
+        # Use the memory's source filename to find the matching QMD hash for accurate citations.
         output = [
             {
-                "docid": anchor_docid,
+                "docid": _get_qmd_anchor_docid(r.get("source", "")),
                 "score": r.get("score", 1.0),
                 "snippet": r.get("snippet", r.get("title", "")),
             }
