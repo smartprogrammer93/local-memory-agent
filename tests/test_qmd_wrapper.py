@@ -237,3 +237,175 @@ class TestMinScoreFilter:
         assert "High" in out
         assert "Medium" in out
         assert "Low" not in out
+
+
+# ─── New tests for --json / -c / _get_qmd_anchor_docid ────────
+
+
+class TestSearchJsonFlag:
+    """--json flag returns valid JSON array with docid/score/snippet fields."""
+
+    @patch("qmd_wrapper._get_qmd_anchor_docid", return_value="deadbeef123")
+    @patch("qmd_wrapper.requests.get")
+    def test_json_output_is_valid_array(self, mock_get, mock_docid, capsys):
+        import json
+        results = _make_results(2)
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"results": results}
+        )
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        _run_cli(["search", "--json", "test", "query"])
+
+        out = capsys.readouterr().out
+        parsed = json.loads(out)
+        assert isinstance(parsed, list)
+        assert len(parsed) == 2
+
+    @patch("qmd_wrapper._get_qmd_anchor_docid", return_value="deadbeef123")
+    @patch("qmd_wrapper.requests.get")
+    def test_json_output_has_required_fields(self, mock_get, mock_docid, capsys):
+        import json
+        results = _make_results(1)
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"results": results}
+        )
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        _run_cli(["search", "--json", "test"])
+
+        out = capsys.readouterr().out
+        parsed = json.loads(out)
+        item = parsed[0]
+        assert "docid" in item
+        assert "score" in item
+        assert "snippet" in item
+
+    @patch("qmd_wrapper._get_qmd_anchor_docid", return_value="deadbeef123")
+    @patch("qmd_wrapper.requests.get")
+    def test_json_output_uses_anchor_docid(self, mock_get, mock_docid, capsys):
+        import json
+        results = _make_results(1)
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"results": results}
+        )
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        _run_cli(["search", "--json", "test"])
+
+        out = capsys.readouterr().out
+        parsed = json.loads(out)
+        assert parsed[0]["docid"] == "deadbeef123"
+
+    @patch("qmd_wrapper._get_qmd_anchor_docid", return_value="deadbeef123")
+    @patch("qmd_wrapper.requests.get")
+    def test_json_output_wraps_answer_field(self, mock_get, mock_docid, capsys):
+        """When agent returns {answer: ...} with no results, wraps it as one item."""
+        import json
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"answer": "Ahmad is Master in Kuwait"}
+        )
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        _run_cli(["search", "--json", "who is Ahmad"])
+
+        out = capsys.readouterr().out
+        parsed = json.loads(out)
+        assert len(parsed) == 1
+        assert "Ahmad is Master in Kuwait" in parsed[0]["snippet"]
+
+    @patch("qmd_wrapper._get_qmd_anchor_docid", return_value="deadbeef123")
+    @patch("qmd_wrapper.requests.get")
+    def test_json_output_unreachable_returns_empty_array(self, mock_get, mock_docid, capsys):
+        import json
+        mock_get.side_effect = requests.ConnectionError("refused")
+
+        _run_cli(["search", "--json", "test"])
+
+        out = capsys.readouterr().out
+        parsed = json.loads(out)
+        assert parsed == []
+
+
+class TestCollectionFlag:
+    """-c / --collection flag is accepted and ignored (searches all memories)."""
+
+    @patch("qmd_wrapper.requests.get")
+    def test_collection_flag_accepted(self, mock_get, capsys):
+        results = _make_results(1)
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"results": results}
+        )
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        # Should not raise an error
+        _run_cli(["search", "-c", "memory-root-main", "test"])
+
+        out = capsys.readouterr().out
+        assert "Result 0" in out
+
+    @patch("qmd_wrapper.requests.get")
+    def test_collection_long_flag_accepted(self, mock_get, capsys):
+        results = _make_results(1)
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"results": results}
+        )
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        _run_cli(["search", "--collection", "my-collection", "test"])
+
+        out = capsys.readouterr().out
+        assert "Result 0" in out
+
+    @patch("qmd_wrapper._get_qmd_anchor_docid", return_value="abc")
+    @patch("qmd_wrapper.requests.get")
+    def test_json_and_collection_flags_together(self, mock_get, mock_docid, capsys):
+        """Exact args OpenClaw passes: search <q> --json -n 6 -c memory-root-main"""
+        import json
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"answer": "synthesized"}
+        )
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        _run_cli(["search", "who is Ahmad", "--json", "-n", "6", "-c", "memory-root-main"])
+
+        out = capsys.readouterr().out
+        parsed = json.loads(out)
+        assert isinstance(parsed, list)
+        assert parsed[0]["snippet"] == "synthesized"
+
+
+class TestGetQmdAnchorDocid:
+    """_get_qmd_anchor_docid() returns a string in all cases."""
+
+    def test_returns_string_when_db_missing(self):
+        with patch("qmd_wrapper.QMD_INDEX", "/nonexistent/path/index.sqlite"):
+            result = qmd_wrapper._get_qmd_anchor_docid()
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_returns_hash_from_real_db(self, tmp_path):
+        import sqlite3
+        db_path = str(tmp_path / "index.sqlite")
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE documents (hash TEXT, path TEXT, active INTEGER)")
+        conn.execute("INSERT INTO documents VALUES ('abc123hash', 'memory.md', 1)")
+        conn.commit()
+        conn.close()
+
+        with patch("qmd_wrapper.QMD_INDEX", db_path):
+            result = qmd_wrapper._get_qmd_anchor_docid()
+        assert result == "abc123hash"
+
+    def test_returns_fallback_when_db_empty(self, tmp_path):
+        import sqlite3
+        db_path = str(tmp_path / "index.sqlite")
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE documents (hash TEXT, path TEXT, active INTEGER)")
+        conn.commit()
+        conn.close()
+
+        with patch("qmd_wrapper.QMD_INDEX", db_path):
+            result = qmd_wrapper._get_qmd_anchor_docid()
+        assert isinstance(result, str)
+        assert len(result) > 0
