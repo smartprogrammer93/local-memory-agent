@@ -152,6 +152,37 @@ The agent watches for new or modified `.md` files and re-ingests them automatica
 
 Allows [OpenClaw](https://github.com/openclaw/openclaw) users to swap QMD's vector-embedding retrieval for this agent's semantic memory. You get richer, context-aware results powered by a local LLM without changing any OpenClaw configuration beyond the memory command.
 
+### Search mode comparison
+
+OpenClaw supports three `searchMode` values. Here's how each behaves with real QMD vs. this agent:
+
+| Mode | Real QMD | local-memory-agent-cli | Latency |
+|---|---|---|---|
+| `search` | BM25 keyword matching (fast, exact terms) | SQLite `LIKE` keyword search over memory summaries | ~20ms ⚡ |
+| `vsearch` | Vector/semantic search — requires local embedding model (~8.5GB RAM) | Full LLM synthesis via `/query` — understands meaning, synonyms, context | 20–90s 🧠 |
+| `query` | QMD structured query language | Same as `search` (SQLite keyword) | ~20ms ⚡ |
+
+**When to use each:**
+- **`search`** (default) — fast lookups, exact term matching, best for real-time `memory_search` tool calls
+- **`vsearch`** — semantic understanding, finds conceptually related memories even without exact keywords; use when query quality matters more than speed (e.g. background research)
+- **`query`** — identical to `search` in this implementation
+
+**Key advantage over real QMD `vsearch`:** real QMD's vector search requires downloading and running a local GGUF embedding model (~8.5GB RAM). Our `vsearch` uses the already-running LLM agent instead — no extra model required.
+
+Set the mode in `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "memory": {
+    "backend": "qmd",
+    "qmd": {
+      "command": "/path/to/local-memory-agent-cli",
+      "searchMode": "search"
+    }
+  }
+}
+```
+
 ### Prerequisites
 
 The local memory agent must be running on port 8888 before using `local-memory-agent-cli`:
@@ -205,9 +236,15 @@ This restores `openclaw.json` from the `.bak` backup, or removes the `memory.qmd
 
 ### OpenClaw timeout configuration
 
-By default OpenClaw allows only 4 seconds for a `memory_search` call. The `local-memory-agent-cli` uses a fast SQLite keyword search (`/search` endpoint, ~20ms) so this is fine for the default integration.
+OpenClaw's default QMD timeout is **4 seconds**. The table below shows which timeout you need for each mode:
 
-If you switch to the full LLM-synthesis endpoint (`/query`) manually or extend the wrapper, you will need to increase the timeout in `~/.openclaw/openclaw.json`:
+| Mode | Typical latency | Recommended `timeoutMs` |
+|---|---|---|
+| `search` | ~20ms | `4000` (default is fine) |
+| `query` | ~20ms | `4000` (default is fine) |
+| `vsearch` | 20–90s | `120000` (2 minutes) |
+
+Update `~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -215,22 +252,25 @@ If you switch to the full LLM-synthesis endpoint (`/query`) manually or extend t
     "backend": "qmd",
     "qmd": {
       "command": "/path/to/local-memory-agent-cli",
+      "searchMode": "vsearch",
       "limits": {
-        "timeoutMs": 60000
+        "timeoutMs": 120000
       }
     }
   }
 }
 ```
 
-Then restart the OpenClaw gateway:
+Then restart the OpenClaw gateway **from outside the current session** (restarting the gateway kills your active exec session if done inline):
 
 ```bash
-# Restart without killing your current session (gateway runs in-process)
+# Safe restart via detached tmux session
 tmux new-session -d -s gw-restart 'sleep 2 && openclaw gateway restart'
 ```
 
-> **Note:** The `limits.timeoutMs` field controls the maximum time OpenClaw waits for a QMD search response. Default is `4000` (4 seconds). The LLM-synthesis `/query` endpoint typically takes 30–90 seconds depending on query complexity and hardware.
+> **Why detached?** The OpenClaw gateway is the process that runs your agent sessions. Restarting it inline kills the current exec, which aborts the restart mid-way. Running it from a detached tmux session avoids this.
+
+> **`vsearch` + high timeout:** If you use `searchMode: "vsearch"`, set `timeoutMs` to at least `120000`. The LLM synthesizes an answer across all stored memories — latency depends on the number of memories, query complexity, and hardware. On a 9B-parameter model, expect 20–90 seconds.
 
 ### Limitations
 
