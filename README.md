@@ -12,49 +12,57 @@ Most AI agents have amnesia. They process information when asked, then forget ev
 
 ## Architecture
 
-```
-                        ┌─────── INPUT SOURCES ────────┐
-                        │                               │
-   📁 ./inbox/          │   ┌───────────────────────┐   │
-   📁 watch-memory/ ────┼──▶│   Media Preprocessor  │   │
-   🌐 POST /ingest      │   │                       │   │
-                        │   │  image  → vision API  │   │
-                        │   │  audio  → Whisper STT │   │
-                        │   │  video  → ffmpeg frames│   │
-                        │   │  pdf    → text/render │   │
-                        │   │  text   → passthrough │   │
-                        │   └──────────┬────────────┘   │
-                        └─────────────┼────────────────-┘
-                                      │
-                                      ▼
-                        ┌───── INGEST AGENT ──────────┐
-                        │                              │
-                        │  • summary (1–2 sentences)   │
-                        │  • entities (people, places) │
-                        │  • topics (2–4 tags)         │
-                        │  • importance score (0–1)    │
-                        └──────────────┬───────────────┘
-                                       │
-                                       ▼
-                        ┌────────── SQLite DB ─────────┐
-                        │                               │
-                        │   memories                    │
-                        │   consolidations              │
-                        │   processed_files             │
-                        └────────┬──────────┬───────────┘
-                                 │          │
-              ┌──────────────────┘          └──────────────────┐
-              ▼                                                 ▼
-┌──── CONSOLIDATE AGENT ──────┐              ┌───── QUERY AGENT ──────┐
-│                              │              │                         │
-│  runs every 30 min           │              │  GET /query?q=...       │
-│  (like the brain during      │              │                         │
-│   sleep)                     │              │  • reads all memories   │
-│                              │              │  • reads consolidations │
-│  • finds cross-connections   │              │  • synthesizes answer   │
-│  • generates key insights    │              │  • cites source IDs     │
-│  • links related memories    │              │                         │
-└──────────────────────────────┘              └─────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph INPUT["📥 Input Sources"]
+        A[📁 ./inbox/]
+        B[📁 watch-memory/]
+        C[🌐 POST /ingest]
+    end
+
+    subgraph MEDIA["🔧 Media Preprocessor"]
+        D1[🖼️ image → vision API]
+        D2[🎵 audio → Whisper STT]
+        D3[🎬 video → ffmpeg frames]
+        D4[📄 pdf → text / render]
+        D5[📝 text → passthrough]
+    end
+
+    subgraph INGEST["🧠 Ingest Agent"]
+        E1[summary · 1–2 sentences]
+        E2[entities · people & places]
+        E3[topics · 2–4 tags]
+        E4[importance · 0.0 – 1.0]
+    end
+
+    subgraph DB["🗄️ SQLite Database"]
+        F[(memories\nconsolidations\nprocessed_files)]
+    end
+
+    subgraph CONSOLIDATE["🔄 Consolidate Agent"]
+        G1[runs every 30 min]
+        G2[finds cross-connections]
+        G3[generates key insights]
+    end
+
+    subgraph QUERY["🔍 Query Agent"]
+        H1[GET /query?q=...]
+        H2[synthesizes answer]
+        H3[cites source IDs]
+    end
+
+    INPUT --> MEDIA
+    MEDIA --> INGEST
+    INGEST --> DB
+    DB --> CONSOLIDATE
+    DB --> QUERY
+
+    style INPUT fill:#1e3a5f,stroke:#4a9eff,color:#fff
+    style MEDIA fill:#2d1b4e,stroke:#9b59b6,color:#fff
+    style INGEST fill:#1a3a2a,stroke:#2ecc71,color:#fff
+    style DB fill:#3a2a00,stroke:#f39c12,color:#fff
+    style CONSOLIDATE fill:#2a1a1a,stroke:#e74c3c,color:#fff
+    style QUERY fill:#1a2a3a,stroke:#3498db,color:#fff
 ```
 
 ---
@@ -187,18 +195,72 @@ The agent watches for new or modified `.md` files and re-ingests them automatica
 
 ## QMD Drop-in Replacement
 
-If you use [OpenClaw](https://github.com/openclaw/openclaw) with the QMD memory backend, you can replace it with this agent for richer, LLM-synthesized memory retrieval:
+### What it is
+
+`qmd-qwen` is a CLI wrapper that mimics the [QMD](https://github.com/openclaw/openclaw) interface but routes queries through the Qwen memory agent. Instead of QMD's vector store, search results come from this agent's LLM-synthesized memory — formatted to match QMD's output exactly, so OpenClaw sees no difference.
+
+### Why
+
+Allows [OpenClaw](https://github.com/openclaw/openclaw) users to swap QMD's vector-embedding retrieval for Qwen's semantic memory. You get richer, context-aware results powered by a local LLM without changing any OpenClaw configuration beyond the memory command.
+
+### Prerequisites
+
+The Qwen memory agent must be running on port 8888 before using `qmd-qwen`:
+
+```bash
+# Option A: run directly
+python agent.py
+
+# Option B: systemd service
+sudo systemctl start local-memory-agent
+```
+
+### Installation
 
 ```bash
 bash install_qmd_wrapper.sh --apply
 ```
 
-This installs `qmd-qwen` — a drop-in CLI wrapper that intercepts `qmd search` calls and routes them through this agent's `/query` endpoint, formatting responses to match QMD's output format exactly.
+This copies `qmd-qwen` to `~/.local/bin/`, makes it executable, and patches `~/.openclaw/openclaw.json` to use it as the memory backend (a `.bak` backup is created automatically).
 
-To restore the original QMD:
+To install without patching the config (manual setup):
+
+```bash
+bash install_qmd_wrapper.sh
+```
+
+### Verification
+
+```bash
+# Check agent connectivity and memory stats
+qmd-qwen status
+
+# Run a test search
+qmd-qwen search "test query"
+```
+
+### Restoring original QMD
+
 ```bash
 bash install_qmd_wrapper.sh --restore
 ```
+
+This restores `openclaw.json` from the `.bak` backup, or removes the `memory.qmd.command` field if no backup exists.
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `QWEN_AGENT_URL` | `http://localhost:8888` | Base URL of the running Qwen memory agent |
+| `QWEN_RESULTS` | `5` | Maximum number of results returned per query |
+
+### Limitations
+
+- **No vector embeddings management** — all retrieval is LLM-synthesized, not embedding-based
+- **No collection CRUD** — `collection`, `ls`, `cleanup` subcommands are no-ops
+- **`get` / `multi-get` are direct file passthrough** — reads files from disk, does not query the agent
+- **`update` / `embed` are no-ops** — the agent handles ingestion via its own watch loop and `/ingest` endpoint
+- **`mcp` subcommand is not supported**
 
 ---
 
