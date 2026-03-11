@@ -12,58 +12,7 @@ Most AI agents have amnesia. They process information when asked, then forget ev
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph INPUT["📥 Input Sources"]
-        A[📁 ./inbox/]
-        B[📁 watch-memory/]
-        C[🌐 POST /ingest]
-    end
-
-    subgraph MEDIA["🔧 Media Preprocessor"]
-        D1[🖼️ image → vision API]
-        D2[🎵 audio → Whisper STT]
-        D3[🎬 video → ffmpeg frames]
-        D4[📄 pdf → text / render]
-        D5[📝 text → passthrough]
-    end
-
-    subgraph INGEST["🧠 Ingest Agent"]
-        E1[summary · 1–2 sentences]
-        E2[entities · people & places]
-        E3[topics · 2–4 tags]
-        E4[importance · 0.0 – 1.0]
-    end
-
-    subgraph DB["🗄️ SQLite Database"]
-        F[(memories\nconsolidations\nprocessed_files)]
-    end
-
-    subgraph CONSOLIDATE["🔄 Consolidate Agent"]
-        G1[runs every 30 min]
-        G2[finds cross-connections]
-        G3[generates key insights]
-    end
-
-    subgraph QUERY["🔍 Query Agent"]
-        H1[GET /query?q=...]
-        H2[synthesizes answer]
-        H3[cites source IDs]
-    end
-
-    INPUT --> MEDIA
-    MEDIA --> INGEST
-    INGEST --> DB
-    DB --> CONSOLIDATE
-    DB --> QUERY
-
-    style INPUT fill:#1e3a5f,stroke:#4a9eff,color:#fff
-    style MEDIA fill:#2d1b4e,stroke:#9b59b6,color:#fff
-    style INGEST fill:#1a3a2a,stroke:#2ecc71,color:#fff
-    style DB fill:#3a2a00,stroke:#f39c12,color:#fff
-    style CONSOLIDATE fill:#2a1a1a,stroke:#e74c3c,color:#fff
-    style QUERY fill:#1a2a3a,stroke:#3498db,color:#fff
-```
+![Architecture Diagram](docs/architecture.png)
 
 ---
 
