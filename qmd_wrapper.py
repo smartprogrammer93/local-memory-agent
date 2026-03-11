@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-QMD Wrapper — CLI interface for the Qwen Memory Agent.
+QMD Wrapper — CLI interface for the Local Memory Agent.
 
 Provides qmd-style subcommands (search, query, vsearch, get, status, etc.)
-that talk to the running Qwen agent HTTP API and format results as QMD snippets.
+that talk to the running local memory agent HTTP API and format results as QMD snippets.
 """
 
 import argparse
@@ -12,8 +12,8 @@ import sys
 
 import requests
 
-QWEN_AGENT_URL = os.getenv("QWEN_AGENT_URL", "http://localhost:8888")
-DEFAULT_RESULTS = int(os.getenv("QWEN_RESULTS", "5"))
+MEMORY_AGENT_URL = os.getenv("MEMORY_AGENT_URL", "http://localhost:8888")
+DEFAULT_RESULTS = int(os.getenv("MEMORY_RESULTS", "5"))
 
 
 # ─── Helpers ───────────────────────────────────────────────────
@@ -22,7 +22,7 @@ DEFAULT_RESULTS = int(os.getenv("QWEN_RESULTS", "5"))
 def _query_agent(query_text, n=None, files_mode=False, min_score=None):
     """POST a query to the agent and return formatted results."""
     n = n or DEFAULT_RESULTS
-    url = f"{QWEN_AGENT_URL}/query"
+    url = f"{MEMORY_AGENT_URL}/query"
 
     try:
         resp = requests.get(url, params={"q": query_text}, timeout=120)
@@ -141,7 +141,7 @@ def cmd_multi_get(args):
 
 
 def cmd_status(args):
-    url = f"{QWEN_AGENT_URL}/status"
+    url = f"{MEMORY_AGENT_URL}/status"
     try:
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
@@ -162,7 +162,7 @@ def cmd_status(args):
 
 
 def cmd_noop(args):
-    print(f"qmd-qwen: {args._subcmd} is a no-op (handled by Qwen agent)")
+    print(f"qmd-qwen: {args._subcmd} is a no-op (handled by local memory agent)")
 
 
 def cmd_mcp(args):
@@ -176,7 +176,7 @@ def cmd_mcp(args):
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="qmd_wrapper",
-        description="QMD-style CLI for the Qwen Memory Agent",
+        description="QMD-style CLI for the Local Memory Agent",
     )
     sub = parser.add_subparsers(dest="command")
 

@@ -1,1 +1,1 @@
-"""Shared fixtures for qwen-memory-agent tests."""
+"""Shared fixtures for local-memory-agent tests."""

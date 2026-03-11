@@ -44,7 +44,7 @@ Three specialized agents collaborate around a shared SQLite memory store:
 - **ffmpeg** — for video frame extraction
 - **SQLite 3** (bundled with Python)
 
-> **Tested with:** `Qwen3.5-9B-Q6_K.gguf` via llama-server, but works with any vision-capable model.
+> **Tested with:** `Local LLM-Q6_K.gguf` via llama-server, but works with any vision-capable model.
 
 ---
 
@@ -200,8 +200,8 @@ This restores `openclaw.json` from the `.bak` backup, or removes the `memory.qmd
 
 | Variable | Default | Description |
 |---|---|---|
-| `QWEN_AGENT_URL` | `http://localhost:8888` | Base URL of the running Qwen memory agent |
-| `QWEN_RESULTS` | `5` | Maximum number of results returned per query |
+| `MEMORY_AGENT_URL` | `http://localhost:8888` | Base URL of the running Qwen memory agent |
+| `MEMORY_RESULTS` | `5` | Maximum number of results returned per query |
 
 ### Limitations
 

@@ -1,5 +1,5 @@
 """
-QwenAgent — Agentic tool-calling loop over OpenAI-compatible API.
+LLMAgent — Agentic tool-calling loop over OpenAI-compatible API.
 
 Wraps AsyncOpenAI with automatic tool schema generation from typed
 Python functions, and a multi-round tool-calling loop.
@@ -126,10 +126,10 @@ def _fn_to_schema(fn: Callable) -> dict:
     }
 
 
-# ─── QwenAgent ───────────────────────────────────────────────
+# ─── LLMAgent ───────────────────────────────────────────────
 
 
-class QwenAgent:
+class LLMAgent:
     """Agentic loop that calls tools via OpenAI-compatible chat completions."""
 
     def __init__(

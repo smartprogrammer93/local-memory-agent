@@ -22,7 +22,7 @@ import streamlit as st
 
 API_PORT = os.environ.get("API_PORT", "8888")
 AGENT_URL = f"http://localhost:{API_PORT}"
-QWEN_BASE_URL = os.environ.get("QWEN_BASE_URL", "http://192.168.8.188:8080")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://192.168.8.188:8080")
 INBOX_DIR = Path("./inbox")
 
 UPLOAD_EXTENSIONS = [
@@ -156,34 +156,34 @@ def main():
             st.info("Start the agent:\n```\npython agent.py\n```")
 
         st.markdown("---")
-        st.markdown("### 🤖 Qwen Server Status")
+        st.markdown("### 🤖 LLM Server Status")
         try:
-            qwen_resp = requests.get(f"{QWEN_BASE_URL}/v1/models", timeout=5)
-            if qwen_resp.status_code == 200:
+            llm_resp = requests.get(f"{LLM_BASE_URL}/v1/models", timeout=5)
+            if llm_resp.status_code == 200:
                 st.markdown(
                     '<div class="stat-card" style="margin-bottom:8px;">'
                     '<div class="stat-number" style="color:#4ade80;">●</div>'
-                    '<div class="stat-label">Qwen3.5-9B Online</div></div>',
+                    '<div class="stat-label">Local LLM Online</div></div>',
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown(
                     '<div class="stat-card" style="margin-bottom:8px;">'
                     '<div class="stat-number" style="color:#ef4444;">●</div>'
-                    f'<div class="stat-label">Qwen3.5-9B Error ({qwen_resp.status_code})</div></div>',
+                    f'<div class="stat-label">Local LLM Error ({llm_resp.status_code})</div></div>',
                     unsafe_allow_html=True,
                 )
         except Exception:
             st.markdown(
                 '<div class="stat-card" style="margin-bottom:8px;">'
                 '<div class="stat-number" style="color:#ef4444;">●</div>'
-                '<div class="stat-label">Qwen3.5-9B Unreachable</div></div>',
+                '<div class="stat-label">Local LLM Unreachable</div></div>',
                 unsafe_allow_html=True,
             )
-        st.caption(f"Server: `{QWEN_BASE_URL}`")
+        st.caption(f"Server: `{LLM_BASE_URL}`")
 
         st.markdown("---")
-        st.markdown("<p style='text-align: center; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px;'>Powered by Qwen3.5-9B</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px;'>Powered by Local LLM</p>", unsafe_allow_html=True)
         st.caption(f"Agent: `{AGENT_URL}`")
 
     # Main
@@ -195,7 +195,7 @@ def main():
             font-size: 36px; margin: 8px 0 4px;">Always On Agent Memory Layer</h1>
         <p style="color: #666; font-size: 14px; max-width: 600px; margin: 0 auto;">
             Always-on memory agent that processes, consolidates, and connects information.<br>
-            Built with <strong style="color: #93c5fd;">Qwen3.5-9B</strong> + <strong style="color: #c4b5fd;">OpenAI-compatible API</strong>.
+            Built with <strong style="color: #93c5fd;">Local LLM</strong> + <strong style="color: #c4b5fd;">OpenAI-compatible API</strong>.
             Runs 24/7 as a background process.
         </p>
         </div>""",

@@ -11,7 +11,7 @@ from agents import (
     MemoryOrchestrator,
     build_agents,
 )
-from llm import QwenAgent
+from llm import LLMAgent
 from tools import (
     read_all_memories,
     read_consolidation_history,
@@ -31,13 +31,13 @@ def test_build_agents_returns_expected_keys():
     assert set(agents.keys()) == {"ingest", "consolidate", "query"}
 
 
-def test_build_agents_returns_qwen_agent_instances():
-    """Each value is a QwenAgent."""
+def test_build_agents_returns_llm_agent_instances():
+    """Each value is a LLMAgent."""
     client = AsyncMock()
     agents = build_agents(client, "test-model")
 
     for name, agent in agents.items():
-        assert isinstance(agent, QwenAgent), f"agents['{name}'] is not a QwenAgent"
+        assert isinstance(agent, LLMAgent), f"agents['{name}'] is not a LLMAgent"
 
 
 def test_build_agents_ingest_has_correct_tools():
@@ -91,7 +91,7 @@ def _make_orchestrator() -> tuple[MemoryOrchestrator, dict[str, AsyncMock]]:
     agents: dict[str, MagicMock] = {}
 
     for name in ("ingest", "consolidate", "query"):
-        agent = MagicMock(spec=QwenAgent)
+        agent = MagicMock(spec=LLMAgent)
         agent.run = AsyncMock(return_value=f"{name} response")
         agents[name] = agent
         mocks[name] = agent.run

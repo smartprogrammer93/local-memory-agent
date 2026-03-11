@@ -1,8 +1,8 @@
 """
-Agent Memory Layer — Always-On Qwen Agent
+Agent Memory Layer — Always-On Local Memory Agent
 
 A lightweight background agent that continuously processes, consolidates,
-and serves memory via a local Qwen model over OpenAI-compatible API.
+and serves memory via a local LLM over OpenAI-compatible API.
 
 Usage:
     python agent.py                          # watch ./inbox, serve on :8888
@@ -42,9 +42,9 @@ load_dotenv()
 
 # ─── Config ────────────────────────────────────────────────────
 
-QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "http://192.168.8.188:8080/v1")
-QWEN_MODEL = os.getenv("QWEN_MODEL", "Qwen3.5-9B-Q6_K.gguf")
-QWEN_API_KEY = os.getenv("QWEN_API_KEY", "none")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://192.168.8.188:8080/v1")
+LLM_MODEL = os.getenv("LLM_MODEL", "Local LLM-Q6_K.gguf")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "none")
 DB_PATH = os.getenv("MEMORY_DB", "memory.db")
 
 ALL_SUPPORTED = TEXT_EXTENSIONS | IMAGE_EXTENSIONS | AUDIO_EXTENSIONS | VIDEO_EXTENSIONS | PDF_EXTENSIONS
@@ -61,9 +61,9 @@ log = logging.getLogger("memory-agent")
 
 class MemoryAgent:
     def __init__(self):
-        self.client = AsyncOpenAI(base_url=QWEN_BASE_URL, api_key=QWEN_API_KEY)
-        self.agents = build_agents(self.client, QWEN_MODEL)
-        self.orchestrator = MemoryOrchestrator(self.agents, self.client, QWEN_MODEL)
+        self.client = AsyncOpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
+        self.agents = build_agents(self.client, LLM_MODEL)
+        self.orchestrator = MemoryOrchestrator(self.agents, self.client, LLM_MODEL)
         init_db()
 
     async def run(self, message: str) -> str:
@@ -304,8 +304,8 @@ async def main_async(args):
     agent = MemoryAgent()
 
     log.info("Agent Memory Layer starting")
-    log.info(f"   Model: {QWEN_MODEL}")
-    log.info(f"   API: {QWEN_BASE_URL}")
+    log.info(f"   Model: {LLM_MODEL}")
+    log.info(f"   API: {LLM_BASE_URL}")
     log.info(f"   Database: {DB_PATH}")
     log.info(f"   Watch: {args.watch}")
     if args.watch_memory:

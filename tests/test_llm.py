@@ -8,7 +8,7 @@ import pytest
 
 from llm import (
     MAX_TOOL_ROUNDS,
-    QwenAgent,
+    LLMAgent,
     _fn_to_schema,
     _json_type,
     _parse_arg_descriptions,
@@ -186,7 +186,7 @@ def _make_client(responses: list):
     return client
 
 
-# ─── QwenAgent._loop tests ───────────────────────────────────
+# ─── LLMAgent._loop tests ───────────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ async def test_loop_text_only_response():
     """Model returns text with no tool calls — should return immediately."""
     client = _make_client([_make_response(content="Hello there!")])
 
-    agent = QwenAgent(
+    agent = LLMAgent(
         name="test",
         system_prompt="You are helpful.",
         tools=[],
@@ -226,7 +226,7 @@ async def test_loop_tool_call_then_text():
     ]
     client = _make_client(responses)
 
-    agent = QwenAgent(
+    agent = LLMAgent(
         name="test",
         system_prompt="You are a calculator.",
         tools=[add],
@@ -264,7 +264,7 @@ async def test_loop_async_tool():
     ]
     client = _make_client(responses)
 
-    agent = QwenAgent(
+    agent = LLMAgent(
         name="test",
         system_prompt="You fetch data.",
         tools=[fetch_data],
@@ -292,7 +292,7 @@ async def test_loop_max_rounds():
     responses = [_make_response(tool_calls=[tc]) for _ in range(MAX_TOOL_ROUNDS)]
     client = _make_client(responses)
 
-    agent = QwenAgent(
+    agent = LLMAgent(
         name="test",
         system_prompt="Loop forever.",
         tools=[noop],
@@ -315,7 +315,7 @@ async def test_loop_unknown_tool():
     ]
     client = _make_client(responses)
 
-    agent = QwenAgent(
+    agent = LLMAgent(
         name="test",
         system_prompt="You are helpful.",
         tools=[],  # no tools registered
@@ -353,7 +353,7 @@ async def test_loop_tool_exception():
     ]
     client = _make_client(responses)
 
-    agent = QwenAgent(
+    agent = LLMAgent(
         name="test",
         system_prompt="Test.",
         tools=[bad_tool],

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SERVICE_NAME="qwen-memory-agent"
+SERVICE_NAME="local-memory-agent"
 SERVICE_FILE="$(cd "$(dirname "$0")" && pwd)/systemd/${SERVICE_NAME}.service"
 TARGET="/etc/systemd/system/${SERVICE_NAME}.service"
 

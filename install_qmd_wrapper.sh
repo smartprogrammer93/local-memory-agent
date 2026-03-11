@@ -40,7 +40,7 @@ check_prerequisites() {
     # Validate source exists
     if [[ ! -f "$SOURCE_FILE" ]]; then
         echo "ERROR: qmd_wrapper.py not found at $SOURCE_FILE" >&2
-        echo "Run this script from the qwen-memory-agent directory." >&2
+        echo "Run this script from the local-memory-agent directory." >&2
         exit 1
     fi
 

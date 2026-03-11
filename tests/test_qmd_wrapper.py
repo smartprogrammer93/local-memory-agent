@@ -1,4 +1,4 @@
-"""Tests for qmd_wrapper.py — CLI interface for Qwen Memory Agent."""
+"""Tests for qmd_wrapper.py — CLI interface for Local Memory Agent."""
 
 import os
 import sys

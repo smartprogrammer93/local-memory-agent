@@ -8,7 +8,7 @@ a keyword-based routing orchestrator.
 
 from openai import AsyncOpenAI
 
-from llm import QwenAgent
+from llm import LLMAgent
 from tools import (
     store_memory,
     read_all_memories,
@@ -55,32 +55,32 @@ QUERY_PROMPT = (
 # ─── Agent Builder ────────────────────────────────────────────
 
 
-def build_agents(client: AsyncOpenAI, model: str) -> dict[str, QwenAgent]:
+def build_agents(client: AsyncOpenAI, model: str) -> dict[str, LLMAgent]:
     """Create the three memory agents with their tools and prompts.
 
     Args:
-        client: An AsyncOpenAI client configured for the Qwen API.
+        client: An AsyncOpenAI client configured for the LLM API.
         model: The model identifier to use for completions.
 
     Returns:
-        dict mapping agent names to configured QwenAgent instances.
+        dict mapping agent names to configured LLMAgent instances.
     """
     return {
-        "ingest": QwenAgent(
+        "ingest": LLMAgent(
             name="ingest_agent",
             system_prompt=INGEST_PROMPT,
             tools=[store_memory],
             client=client,
             model=model,
         ),
-        "consolidate": QwenAgent(
+        "consolidate": LLMAgent(
             name="consolidate_agent",
             system_prompt=CONSOLIDATE_PROMPT,
             tools=[read_unconsolidated_memories, store_consolidation],
             client=client,
             model=model,
         ),
-        "query": QwenAgent(
+        "query": LLMAgent(
             name="query_agent",
             system_prompt=QUERY_PROMPT,
             tools=[read_all_memories, read_consolidation_history],
@@ -103,7 +103,7 @@ class MemoryOrchestrator:
 
     def __init__(
         self,
-        agents: dict[str, QwenAgent],
+        agents: dict[str, LLMAgent],
         client: AsyncOpenAI,
         model: str,
     ):
