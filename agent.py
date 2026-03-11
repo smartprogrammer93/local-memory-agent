@@ -295,7 +295,37 @@ def build_http(agent: MemoryAgent, watch_path: str = "./inbox"):
         results = search_memories_fast(q, n)
         return web.json_response({"results": results})
 
+    async def handle_expand(request: web.Request):
+        """LLM query expansion — returns synonyms/related terms for a search query."""
+        q = request.rel_url.query.get("q", "").strip()
+        if not q:
+            return web.json_response({"expanded": ""})
+        try:
+            resp = await asyncio.wait_for(
+                agent.client.chat.completions.create(
+                    model=LLM_MODEL,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": (
+                                "Expand this search query with synonyms and related terms. "
+                                "Return ONLY a space-separated list of keywords, no explanation: "
+                                + q
+                            ),
+                        }
+                    ],
+                    temperature=0.3,
+                ),
+                timeout=30,
+            )
+            expanded = resp.choices[0].message.content.strip()
+            return web.json_response({"expanded": expanded})
+        except Exception as exc:
+            log.warning(f"Query expansion failed: {exc}")
+            return web.json_response({"expanded": q})
+
     app.router.add_get("/search", handle_search)
+    app.router.add_get("/expand", handle_expand)
     app.router.add_get("/query", handle_query)
     app.router.add_post("/ingest", handle_ingest)
     app.router.add_post("/ingest-file", handle_ingest_file)

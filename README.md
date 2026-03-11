@@ -160,12 +160,12 @@ OpenClaw supports three `searchMode` values. Here's how each behaves with real Q
 |---|---|---|---|
 | `search` | BM25 keyword matching (fast, exact terms) | SQLite `LIKE` keyword search over memory summaries | ~20ms ⚡ |
 | `vsearch` | Vector/semantic search — requires local embedding model (~8.5GB RAM) | Full LLM synthesis via `/query` — understands meaning, synonyms, context | 20–90s 🧠 |
-| `query` | QMD structured query language | Same as `search` (SQLite keyword) | ~20ms ⚡ |
+| `query` | QMD structured query language | LLM query expansion + SQLite keyword search | ~3-5s 🔍 |
 
 **When to use each:**
 - **`search`** (default) — fast lookups, exact term matching, best for real-time `memory_search` tool calls
 - **`vsearch`** — semantic understanding, finds conceptually related memories even without exact keywords; use when query quality matters more than speed (e.g. background research)
-- **`query`** — identical to `search` in this implementation
+- **`query`** — LLM-expanded keyword search; enriches your query with synonyms and related terms before searching, better recall than plain `search` with moderate latency (~3-5s)
 
 **Key advantage over real QMD `vsearch`:** real QMD's vector search requires downloading and running a local GGUF embedding model (~8.5GB RAM). Our `vsearch` uses the already-running LLM agent instead — no extra model required.
 
@@ -241,7 +241,7 @@ OpenClaw's default QMD timeout is **4 seconds**. The table below shows which tim
 | Mode | Typical latency | Recommended `timeoutMs` |
 |---|---|---|
 | `search` | ~20ms | `4000` (default is fine) |
-| `query` | ~20ms | `4000` (default is fine) |
+| `query` | ~3-5s | `10000` (10 seconds) |
 | `vsearch` | 20–90s | `120000` (2 minutes) |
 
 Update `~/.openclaw/openclaw.json`:

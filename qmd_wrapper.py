@@ -59,18 +59,34 @@ def _get_qmd_anchor_docid(filename: str = "") -> str:
 # ─── Helpers ───────────────────────────────────────────────────
 
 
-def _query_agent(query_text, n=None, files_mode=False, min_score=None, json_output=False, semantic=False):
+def _query_agent(query_text, n=None, files_mode=False, min_score=None, json_output=False, semantic=False, expand=False):
     """Search memories.
 
-    semantic=False → fast SQLite keyword search via /search (~16ms, used by `search` and `query`)
-    semantic=True  → full LLM-synthesis via /query (~30-90s, used by `vsearch`)
+    semantic=False, expand=False → fast SQLite keyword search via /search (~20ms, used by `search`)
+    semantic=False, expand=True  → LLM query expansion + SQLite search (~3-5s, used by `query`)
+    semantic=True                → full LLM-synthesis via /query (~30-90s, used by `vsearch`)
     """
     import json as _json
     n = n or DEFAULT_RESULTS
+
+    # When expand=True, call /expand first to get enriched keywords
+    search_text = query_text
+    if expand and not semantic:
+        try:
+            exp_resp = requests.get(
+                f"{MEMORY_AGENT_URL}/expand", params={"q": query_text}, timeout=30
+            )
+            exp_resp.raise_for_status()
+            expanded = exp_resp.json().get("expanded", "").strip()
+            if expanded:
+                search_text = expanded
+        except Exception:
+            pass  # fall back to original query_text
+
     url = f"{MEMORY_AGENT_URL}/{'query' if semantic else 'search'}"
 
     try:
-        resp = requests.get(url, params={"q": query_text}, timeout=120)
+        resp = requests.get(url, params={"q": search_text}, timeout=120)
         resp.raise_for_status()
     except (requests.ConnectionError, requests.Timeout) as exc:
         if json_output:
@@ -193,6 +209,7 @@ def cmd_search(args):
         min_score=args.min_score,
         json_output=getattr(args, "json", False),
         semantic=getattr(args, "_semantic", False),
+        expand=getattr(args, "_expand", False),
     )
 
 
@@ -245,7 +262,8 @@ def build_parser():
     )
     sub = parser.add_subparsers(dest="command")
 
-    # search / query → fast SQLite keyword search
+    # search → fast SQLite keyword search
+    # query  → LLM query expansion + SQLite keyword search
     # vsearch → full LLM-synthesis (semantic, slower)
     for name in ("search", "query", "vsearch"):
         p = sub.add_parser(name, help=f"Search memories ({name})")
@@ -255,7 +273,7 @@ def build_parser():
         p.add_argument("--min-score", type=int, default=None, help="Min confidence %%")
         p.add_argument("--json", action="store_true", help="JSON output (ignored, always plain text)")
         p.add_argument("-c", "--collection", default=None, help="Collection name (ignored, searches all)")
-        p.set_defaults(func=cmd_search, _semantic=(name == "vsearch"))
+        p.set_defaults(func=cmd_search, _semantic=(name == "vsearch"), _expand=(name == "query"))
 
     # get
     p = sub.add_parser("get", help="Read a file from disk")

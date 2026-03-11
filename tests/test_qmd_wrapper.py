@@ -434,3 +434,73 @@ class TestGetQmdAnchorDocid:
             result = qmd_wrapper._get_qmd_anchor_docid()
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+# ─── Tests for query mode (LLM expansion + SQLite search) ────
+
+
+class TestQueryModeExpansion:
+    """query mode calls /expand then /search; search/vsearch do not call /expand."""
+
+    @patch("qmd_wrapper.requests.get")
+    def test_query_mode_hits_expand_then_search(self, mock_get, capsys):
+        """query subcommand calls GET /expand then GET /search (two calls)."""
+        expand_resp = MagicMock(status_code=200, json=lambda: {"expanded": "cat feline kitten"})
+        expand_resp.raise_for_status = MagicMock()
+        search_resp = MagicMock(status_code=200, json=lambda: {"results": _make_results(1)})
+        search_resp.raise_for_status = MagicMock()
+        mock_get.side_effect = [expand_resp, search_resp]
+
+        _run_cli(["query", "cat"])
+
+        assert mock_get.call_count == 2
+        # First call should be /expand
+        first_url = mock_get.call_args_list[0][0][0]
+        assert "/expand" in first_url
+        # Second call should be /search with expanded terms
+        second_url = mock_get.call_args_list[1][0][0]
+        assert "/search" in second_url
+        second_params = mock_get.call_args_list[1][1].get("params", {})
+        assert second_params.get("q") == "cat feline kitten"
+
+    @patch("qmd_wrapper.requests.get")
+    def test_query_mode_falls_back_on_expand_failure(self, mock_get, capsys):
+        """If /expand fails, query mode falls back to plain /search with original query."""
+        expand_resp = MagicMock()
+        expand_resp.raise_for_status.side_effect = requests.RequestException("500")
+        search_resp = MagicMock(status_code=200, json=lambda: {"results": _make_results(1)})
+        search_resp.raise_for_status = MagicMock()
+        mock_get.side_effect = [expand_resp, search_resp]
+
+        _run_cli(["query", "cat"])
+
+        assert mock_get.call_count == 2
+        # Search should use the original query text
+        second_params = mock_get.call_args_list[1][1].get("params", {})
+        assert second_params.get("q") == "cat"
+
+    @patch("qmd_wrapper.requests.get")
+    def test_search_mode_does_not_call_expand(self, mock_get, capsys):
+        """search subcommand should NOT call /expand — only /search."""
+        search_resp = MagicMock(status_code=200, json=lambda: {"results": []})
+        search_resp.raise_for_status = MagicMock()
+        mock_get.return_value = search_resp
+
+        _run_cli(["search", "cat"])
+
+        assert mock_get.call_count == 1
+        assert "/search" in mock_get.call_args[0][0]
+        assert "/expand" not in mock_get.call_args[0][0]
+
+    @patch("qmd_wrapper.requests.get")
+    def test_vsearch_mode_does_not_call_expand(self, mock_get, capsys):
+        """vsearch subcommand should NOT call /expand — only /query."""
+        query_resp = MagicMock(status_code=200, json=lambda: {"answer": "result"})
+        query_resp.raise_for_status = MagicMock()
+        mock_get.return_value = query_resp
+
+        _run_cli(["vsearch", "cat"])
+
+        assert mock_get.call_count == 1
+        assert "/query" in mock_get.call_args[0][0]
+        assert "/expand" not in mock_get.call_args[0][0]
