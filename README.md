@@ -150,7 +150,7 @@ The agent watches for new or modified `.md` files and re-ingests them automatica
 
 ### Why
 
-Allows [OpenClaw](https://github.com/openclaw/openclaw) users to swap QMD's vector-embedding retrieval for Qwen's semantic memory. You get richer, context-aware results powered by a local LLM without changing any OpenClaw configuration beyond the memory command.
+Allows [OpenClaw](https://github.com/openclaw/openclaw) users to swap QMD's vector-embedding retrieval for this agent's semantic memory. You get richer, context-aware results powered by a local LLM without changing any OpenClaw configuration beyond the memory command.
 
 ### Prerequisites
 
@@ -200,7 +200,7 @@ This restores `openclaw.json` from the `.bak` backup, or removes the `memory.qmd
 
 | Variable | Default | Description |
 |---|---|---|
-| `MEMORY_AGENT_URL` | `http://localhost:8888` | Base URL of the running Qwen memory agent |
+| `MEMORY_AGENT_URL` | `http://localhost:8888` | Base URL of the running local memory agent |
 | `MEMORY_RESULTS` | `5` | Maximum number of results returned per query |
 
 ### Limitations
