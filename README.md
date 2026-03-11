@@ -146,7 +146,7 @@ The agent watches for new or modified `.md` files and re-ingests them automatica
 
 ### What it is
 
-`local-memory-agent-cli` is a CLI wrapper that mimics the [QMD](https://github.com/openclaw/openclaw) interface but routes queries through the Qwen memory agent. Instead of QMD's vector store, search results come from this agent's LLM-synthesized memory — formatted to match QMD's output exactly, so OpenClaw sees no difference.
+`local-memory-agent-cli` is a CLI wrapper that mimics the [QMD](https://github.com/openclaw/openclaw) interface but routes queries through the local memory agent. Instead of QMD's vector store, search results come from this agent's LLM-synthesized memory — formatted to match QMD's output exactly, so OpenClaw sees no difference.
 
 ### Why
 
@@ -154,7 +154,7 @@ Allows [OpenClaw](https://github.com/openclaw/openclaw) users to swap QMD's vect
 
 ### Prerequisites
 
-The Qwen memory agent must be running on port 8888 before using `local-memory-agent-cli`:
+The local memory agent must be running on port 8888 before using `local-memory-agent-cli`:
 
 ```bash
 # Option A: run directly
